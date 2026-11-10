@@ -80,8 +80,20 @@ new RustFSContainer("rustfs/rustfs:1.0.1")
         .withSecretKey("my-secret-key");
 ```
 
-`withEnv("RUSTFS_ACCESS_KEY", …)` and `withEnv("RUSTFS_SECRET_KEY", …)` work as well, and
-`getAccessKey()` / `getSecretKey()` always return what the container was started with.
+`withEnv("RUSTFS_ACCESS_KEY", …)` / `withEnv("RUSTFS_SECRET_KEY", …)` work as well, and so do the
+names you may have from MinIO: `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` (or `RUSTFS_ROOT_USER` /
+`RUSTFS_ROOT_PASSWORD`). `getAccessKey()` / `getSecretKey()` always return what the container was
+started with.
+
+### Image from a mirror registry
+
+An image that is not named `rustfs/rustfs` is rejected, so a typo cannot start some other server.
+For a company mirror, mark it as a substitute:
+
+```java
+new RustFSContainer(DockerImageName.parse("mirror.example.com/rustfs/rustfs:1.0.1")
+        .asCompatibleSubstituteFor("rustfs/rustfs"));
+```
 
 ### From another container
 
@@ -159,6 +171,7 @@ RustFS while it is still booting.
 | `The Access Key Id you provided does not exist in our records` (403) | The client uses other credentials than the container. Pass `getAccessKey()` / `getSecretKey()` to the client. |
 | `IllegalStateException: … must be set before the container is started` | `withAccessKey` / `withSecretKey` was called after `start()`. Move it before `start()`. |
 | Start times out after 1 minute | The image is older than `1.0.0`, or Docker is not running. |
+| `Failed to verify that image '…' is a compatible substitute for 'rustfs/rustfs'` | The image comes from another registry. See [Image from a mirror registry](#image-from-a-mirror-registry). |
 
 ## Migrating from MinIOContainer
 
