@@ -1,0 +1,5 @@
+# JitPack has no Docker, so skip the Testcontainers tests here (GitHub Actions runs them)
+jdk:
+  - openjdk17
+install:
+  - ./gradlew publishToMavenLocal -x test
