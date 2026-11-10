@@ -18,7 +18,8 @@ is a drop-in style replacement for `MinIOContainer`.
   Testcontainers version on you; your project's version is used. Testcontainers 1.21.3 and older
   cannot talk to Docker Engine 29.
 - Docker
-- Tested in CI with `rustfs/rustfs:1.0.1` and `rustfs/rustfs:latest`, on Testcontainers 1.21.4 and 2.0.5
+- RustFS image `1.0.0` or newer (old `1.0.0-alpha` images do not start this way).
+  Tested in CI with `rustfs/rustfs:1.0.1` and `rustfs/rustfs:latest`, on Testcontainers 1.21.4 and 2.0.5
 
 ## Install
 
@@ -71,12 +72,32 @@ try (RustFSContainer rustfs = new RustFSContainer("rustfs/rustfs:1.0.1")) {
 }
 ```
 
-Custom credentials (default: `rustfsadmin` / `rustfsadmin`):
+Custom credentials (default: `rustfsadmin` / `rustfsadmin`). Set them before `start()`:
 
 ```java
 new RustFSContainer("rustfs/rustfs:1.0.1")
         .withAccessKey("my-user")
         .withSecretKey("my-secret-key");
+```
+
+`withEnv("RUSTFS_ACCESS_KEY", …)` and `withEnv("RUSTFS_SECRET_KEY", …)` work as well, and
+`getAccessKey()` / `getSecretKey()` always return what the container was started with.
+
+### From another container
+
+`getS3Url()` is for the test JVM (`localhost` + a random port). When another container talks to
+RustFS, put both on one network and use the alias with port `9000`:
+
+```java
+Network network = Network.newNetwork();
+
+RustFSContainer rustfs = new RustFSContainer("rustfs/rustfs:1.0.1")
+        .withNetwork(network)
+        .withNetworkAliases("rustfs");
+
+GenericContainer<?> app = new GenericContainer<>("my-app:latest")
+        .withNetwork(network)
+        .withEnv("S3_ENDPOINT", "http://rustfs:9000");
 ```
 
 ### JUnit 5
@@ -129,6 +150,15 @@ class StorageTestConfig {
 
 The container waits for `/health/ready` before it reports as started, so tests do not hit
 RustFS while it is still booting.
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+| --- | --- |
+| `Bucket name should be between 3 and 63 characters long` or `The specified bucket is not valid` | The S3 client uses virtual-hosted style (`bucket.localhost`). Turn on path style: `forcePathStyle(true)` (AWS SDK v2), `withPathStyleAccessEnabled(true)` (v1), `spring.cloud.aws.s3.path-style-access-enabled=true` (Spring Cloud AWS). |
+| `The Access Key Id you provided does not exist in our records` (403) | The client uses other credentials than the container. Pass `getAccessKey()` / `getSecretKey()` to the client. |
+| `IllegalStateException: … must be set before the container is started` | `withAccessKey` / `withSecretKey` was called after `start()`. Move it before `start()`. |
+| Start times out after 1 minute | The image is older than `1.0.0`, or Docker is not running. |
 
 ## Migrating from MinIOContainer
 

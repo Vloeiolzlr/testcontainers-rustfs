@@ -55,6 +55,41 @@ class RustFSContainerTest {
 	}
 
 	@Test
+	void credentialsFromWithEnvAreKept() {
+		// people used to Testcontainers often set the environment directly
+		try (RustFSContainer rustfs = new RustFSContainer(IMAGE).withEnv("RUSTFS_ACCESS_KEY", "env-user")
+				.withEnv("RUSTFS_SECRET_KEY", "env-secret")) {
+			rustfs.start();
+
+			assertThat(rustfs.getAccessKey()).isEqualTo("env-user");
+			assertThat(rustfs.getSecretKey()).isEqualTo("env-secret");
+			try (S3Client s3 = s3(rustfs, "env-user", "env-secret")) {
+				s3.createBucket(b -> b.bucket("from-env"));
+			}
+		}
+	}
+
+	@Test
+	void credentialsCannotChangeAfterStart() {
+		try (RustFSContainer rustfs = new RustFSContainer(IMAGE)) {
+			rustfs.start();
+
+			assertThatThrownBy(() -> rustfs.withAccessKey("late-user")).isInstanceOf(IllegalStateException.class);
+			assertThatThrownBy(() -> rustfs.withSecretKey("late-secret")).isInstanceOf(IllegalStateException.class);
+			assertThat(rustfs.getAccessKey()).isEqualTo(RustFSContainer.DEFAULT_ACCESS_KEY);
+		}
+	}
+
+	@Test
+	void rejectsBlankCredentials() {
+		RustFSContainer rustfs = new RustFSContainer(IMAGE);
+
+		assertThatThrownBy(() -> rustfs.withAccessKey(null)).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> rustfs.withAccessKey(" ")).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> rustfs.withSecretKey("")).isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
 	void consoleIsReachable() throws Exception {
 		try (RustFSContainer rustfs = new RustFSContainer(IMAGE)) {
 			rustfs.start();

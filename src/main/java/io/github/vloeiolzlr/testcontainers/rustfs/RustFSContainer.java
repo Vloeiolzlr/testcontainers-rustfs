@@ -44,10 +44,6 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 
 	private static final String SECRET_KEY_ENV = "RUSTFS_SECRET_KEY";
 
-	private String accessKey = DEFAULT_ACCESS_KEY;
-
-	private String secretKey = DEFAULT_SECRET_KEY;
-
 	/**
 	 * Creates a container from an image name.
 	 *
@@ -66,6 +62,9 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 		super(dockerImageName);
 		dockerImageName.assertCompatibleWith(DEFAULT_IMAGE_NAME);
 		withExposedPorts(S3_PORT, CONSOLE_PORT);
+		// Credentials live only in the container environment, so withEnv("RUSTFS_ACCESS_KEY", …) works too
+		withEnv(ACCESS_KEY_ENV, DEFAULT_ACCESS_KEY);
+		withEnv(SECRET_KEY_ENV, DEFAULT_SECRET_KEY);
 		// The port opens a moment before RustFS can serve requests, so wait for the readiness endpoint
 		waitingFor(Wait.forHttp("/health/ready").forPort(S3_PORT).withStartupTimeout(Duration.ofMinutes(1)));
 	}
@@ -73,29 +72,36 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 	/**
 	 * Sets the access key (user name). Default: {@value #DEFAULT_ACCESS_KEY}.
 	 *
-	 * @param accessKey access key
+	 * @param accessKey access key, not blank
 	 * @return this container
+	 * @throws IllegalArgumentException if the key is null or blank
+	 * @throws IllegalStateException if the container is already running
 	 */
 	public RustFSContainer withAccessKey(String accessKey) {
-		this.accessKey = accessKey;
-		return self();
+		return withCredential(ACCESS_KEY_ENV, "accessKey", accessKey);
 	}
 
 	/**
 	 * Sets the secret key (password). Default: {@value #DEFAULT_SECRET_KEY}.
 	 *
-	 * @param secretKey secret key
+	 * @param secretKey secret key, not blank
 	 * @return this container
+	 * @throws IllegalArgumentException if the key is null or blank
+	 * @throws IllegalStateException if the container is already running
 	 */
 	public RustFSContainer withSecretKey(String secretKey) {
-		this.secretKey = secretKey;
-		return self();
+		return withCredential(SECRET_KEY_ENV, "secretKey", secretKey);
 	}
 
-	@Override
-	protected void configure() {
-		withEnv(ACCESS_KEY_ENV, accessKey);
-		withEnv(SECRET_KEY_ENV, secretKey);
+	private RustFSContainer withCredential(String env, String name, String value) {
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException(name + " must not be blank");
+		}
+		// changing the environment of a running container has no effect, and the getters would no longer match
+		if (isRunning()) {
+			throw new IllegalStateException(name + " must be set before the container is started");
+		}
+		return withEnv(env, value);
 	}
 
 	/**
@@ -123,7 +129,7 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 	 * @return access key
 	 */
 	public String getAccessKey() {
-		return accessKey;
+		return getEnvMap().get(ACCESS_KEY_ENV);
 	}
 
 	/**
@@ -132,6 +138,6 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 	 * @return secret key
 	 */
 	public String getSecretKey() {
-		return secretKey;
+		return getEnvMap().get(SECRET_KEY_ENV);
 	}
 }
