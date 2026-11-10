@@ -38,6 +38,8 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 	/** Secret key used when {@link #withSecretKey(String)} is not called */
 	public static final String DEFAULT_SECRET_KEY = "rustfsadmin";
 
+	private static final String CONSOLE_PATH = "/rustfs/console/";
+
 	private static final String ACCESS_KEY_ENV = "RUSTFS_ACCESS_KEY";
 
 	private static final String SECRET_KEY_ENV = "RUSTFS_SECRET_KEY";
@@ -108,10 +110,11 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 	/**
 	 * Returns the web console address reachable from the test.
 	 *
-	 * @return console address, for example {@code http://localhost:55013}
+	 * @return console address, for example {@code http://localhost:55013/rustfs/console/}
 	 */
 	public String getConsoleUrl() {
-		return String.format("http://%s:%d", getHost(), getMappedPort(CONSOLE_PORT));
+		// the console port answers 403 at "/"; the UI itself lives under this path
+		return String.format("http://%s:%d%s", getHost(), getMappedPort(CONSOLE_PORT), CONSOLE_PATH);
 	}
 
 	/**

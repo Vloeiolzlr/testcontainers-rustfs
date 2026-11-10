@@ -4,10 +4,19 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "0 0 * * 1" # every Monday, to notice when a new RustFS release breaks the module
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["rustfs/rustfs:1.0.1", "rustfs/rustfs:latest"]
+    name: test (${{ matrix.image }})
+    env:
+      RUSTFS_IMAGE: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

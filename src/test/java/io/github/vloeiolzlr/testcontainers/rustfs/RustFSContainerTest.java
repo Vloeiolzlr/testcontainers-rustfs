@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +19,8 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 class RustFSContainerTest {
 
-	private static final String IMAGE = "rustfs/rustfs:1.0.1";
+	/** CI also runs these tests against rustfs/rustfs:latest through the RUSTFS_IMAGE variable */
+	private static final String IMAGE = System.getenv().getOrDefault("RUSTFS_IMAGE", "rustfs/rustfs:1.0.1");
 
 	@Test
 	void putAndGetObjectWithDefaultCredentials() {
@@ -47,6 +51,18 @@ class RustFSContainerTest {
 			try (S3Client wrong = s3(rustfs, RustFSContainer.DEFAULT_ACCESS_KEY, RustFSContainer.DEFAULT_SECRET_KEY)) {
 				assertThatThrownBy(wrong::listBuckets).isInstanceOf(S3Exception.class);
 			}
+		}
+	}
+
+	@Test
+	void consoleIsReachable() throws Exception {
+		try (RustFSContainer rustfs = new RustFSContainer(IMAGE)) {
+			rustfs.start();
+
+			assertThat(rustfs.getConsoleUrl()).endsWith("/rustfs/console/");
+			HttpResponse<String> res = HttpClient.newHttpClient()
+					.send(HttpRequest.newBuilder(URI.create(rustfs.getConsoleUrl())).build(), HttpResponse.BodyHandlers.ofString());
+			assertThat(res.statusCode()).isEqualTo(200);
 		}
 	}
 
