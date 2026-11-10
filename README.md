@@ -14,9 +14,11 @@ is a drop-in style replacement for `MinIOContainer`.
 ## Requirements
 
 - Java 17+
-- Testcontainers 2.x
+- Testcontainers 1.21.4+ or 2.x (works with Spring Boot 3 and 4). The library does not force a
+  Testcontainers version on you; your project's version is used. Testcontainers 1.21.3 and older
+  cannot talk to Docker Engine 29.
 - Docker
-- Tested with `rustfs/rustfs:1.0.1`
+- Tested in CI with `rustfs/rustfs:1.0.1` and `rustfs/rustfs:latest`, on Testcontainers 1.21.4 and 2.0.5
 
 ## Install
 

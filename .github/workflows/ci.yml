@@ -14,7 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         image: ["rustfs/rustfs:1.0.1", "rustfs/rustfs:latest"]
-    name: test (${{ matrix.image }})
+        testcontainers: ["1.21.4", "2.0.5"] # Spring Boot 3 uses 1.x, Spring Boot 4 uses 2.x
+    name: test (${{ matrix.image }}, TC ${{ matrix.testcontainers }})
     env:
       RUSTFS_IMAGE: ${{ matrix.image }}
     steps:
@@ -25,4 +26,4 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
-      - run: ./gradlew build
+      - run: ./gradlew build -PtestcontainersTestVersion=${{ matrix.testcontainers }}
