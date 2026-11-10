@@ -1,6 +1,8 @@
 package io.github.vloeiolzlr.testcontainers.rustfs;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -43,6 +45,11 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 	private static final String ACCESS_KEY_ENV = "RUSTFS_ACCESS_KEY";
 
 	private static final String SECRET_KEY_ENV = "RUSTFS_SECRET_KEY";
+
+	/** Other names RustFS accepts for the credentials. RUSTFS_ACCESS_KEY wins over them inside RustFS. */
+	private static final List<String> ACCESS_KEY_ALIASES = List.of("RUSTFS_ROOT_USER", "MINIO_ROOT_USER");
+
+	private static final List<String> SECRET_KEY_ALIASES = List.of("RUSTFS_ROOT_PASSWORD", "MINIO_ROOT_PASSWORD");
 
 	/**
 	 * Creates a container from an image name.
@@ -91,6 +98,26 @@ public class RustFSContainer extends GenericContainer<RustFSContainer> {
 	 */
 	public RustFSContainer withSecretKey(String secretKey) {
 		return withCredential(SECRET_KEY_ENV, "secretKey", secretKey);
+	}
+
+	/**
+	 * Copies credentials given as {@code MINIO_ROOT_USER} / {@code RUSTFS_ROOT_USER} (and the password
+	 * variants) into {@code RUSTFS_ACCESS_KEY} / {@code RUSTFS_SECRET_KEY}. Otherwise the defaults set in the
+	 * constructor would win inside RustFS and the given values would be silently ignored.
+	 */
+	@Override
+	protected void configure() {
+		useAlias(ACCESS_KEY_ENV, DEFAULT_ACCESS_KEY, ACCESS_KEY_ALIASES);
+		useAlias(SECRET_KEY_ENV, DEFAULT_SECRET_KEY, SECRET_KEY_ALIASES);
+	}
+
+	private void useAlias(String env, String defaultValue, List<String> aliases) {
+		Map<String, String> envMap = getEnvMap();
+		if (!defaultValue.equals(envMap.get(env))) {
+			return; // set explicitly, keep it
+		}
+		aliases.stream().map(envMap::get).filter(v -> v != null && !v.isBlank()).findFirst()
+				.ifPresent(v -> withEnv(env, v));
 	}
 
 	private RustFSContainer withCredential(String env, String name, String value) {

@@ -3,8 +3,10 @@ plugins {
 	`maven-publish`  // JitPack · Maven 저장소에 올릴 때 씀
 }
 
-group = "io.github.vloeiolzlr"
-version = "0.1.0"
+// JitPack 은 빌드할 때 GROUP (com.github.Vloeiolzlr) · VERSION (태그, 예: v0.1.0) 을 넣어 줌.
+// 그 값으로 만들어야 com.github.Vloeiolzlr:testcontainers-rustfs:v0.1.0 으로 받아 갈 수 있음
+group = System.getenv("GROUP") ?: "io.github.vloeiolzlr"
+version = System.getenv("VERSION") ?: "0.1.0"
 
 repositories {
 	mavenCentral()

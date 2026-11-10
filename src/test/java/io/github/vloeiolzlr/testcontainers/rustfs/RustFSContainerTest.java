@@ -70,6 +70,21 @@ class RustFSContainerTest {
 	}
 
 	@Test
+	void minioStyleCredentialsAreUsed() {
+		// people moving from MinIO keep their MINIO_ROOT_USER / MINIO_ROOT_PASSWORD settings
+		try (RustFSContainer rustfs = new RustFSContainer(IMAGE).withEnv("MINIO_ROOT_USER", "minio-user")
+				.withEnv("MINIO_ROOT_PASSWORD", "minio-password")) {
+			rustfs.start();
+
+			assertThat(rustfs.getAccessKey()).isEqualTo("minio-user");
+			assertThat(rustfs.getSecretKey()).isEqualTo("minio-password");
+			try (S3Client s3 = s3(rustfs, "minio-user", "minio-password")) {
+				s3.createBucket(b -> b.bucket("from-minio-env"));
+			}
+		}
+	}
+
+	@Test
 	void credentialsCannotChangeAfterStart() {
 		try (RustFSContainer rustfs = new RustFSContainer(IMAGE)) {
 			rustfs.start();
